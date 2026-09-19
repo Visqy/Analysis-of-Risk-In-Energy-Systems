@@ -1,0 +1,28 @@
+# Project/research notes — not part of the deployed app
+CLAUDE.md
+docs/
+
+# Claude Code local tooling (dev-only, not needed for deploy)
+.claude/
+
+# Streamlit secrets (never commit credentials/API keys)
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
