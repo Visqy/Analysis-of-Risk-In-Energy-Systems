@@ -1,0 +1,119 @@
+"""Komponen UI bersama: header, stepper, tile, strip metadata hasil, dan keadaan kosong."""
+
+import streamlit as st
+
+from core.state import get_run, is_stale, ui_status
+from core.scenarios import VARIABLE_UNITS
+
+_BADGES = {
+    "invalid": ("Input belum valid", "#FDECEA", "#8F1D15", "#F2B8B2"),
+    "ready": ("Model siap", "#E6F6EE", "#17694A", "#A9DBC4"),
+    "fresh": ("Hasil terbaru", "#E7F0FF", "#1F4FB8", "#B7CEF7"),
+    "stale": ("Hasil usang — jalankan ulang", "#FFF6DC", "#7A5200", "#EBCB76"),
+}
+
+
+def header():
+    """Chip skenario + badge status, dipasang di bar atas Streamlit (fixed).
+    Brand ARIES ada di sidebar lewat st.logo (app.py)."""
+    status, _ = ui_status()
+    text, bg, fg, bd = _BADGES[status]
+    scenario = st.session_state["scenario_name"]
+    st.markdown(
+        f"""
+<style>
+.aries-topbar {{ position: fixed; top: 0.6rem; right: 4.2rem; z-index: 1000000;
+  display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 9rem); }}
+.aries-topbar .chip {{ padding: 6px 12px; border-radius: 8px; font-size: 13px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }}
+div[data-testid="stElementContainer"]:has(.aries-topbar) {{ position: absolute; height: 0; margin: 0; }}
+@media (max-width: 760px) {{
+  .aries-topbar .chip-scn {{ display: none; }}
+  .aries-topbar {{ right: 3.4rem; }}
+}}
+@media print {{ .aries-topbar {{ position: static; margin-bottom: 8px; }}
+  div[data-testid="stElementContainer"]:has(.aries-topbar) {{ position: static; height: auto; }} }}
+</style>
+<div class="aries-topbar">
+  <div class="chip chip-scn" style="border:1px solid #DCE3EC;background:#fff;color:#5C6B80">
+    Skenario: <strong style="color:#10233B">{scenario}</strong></div>
+  <div class="chip" style="border-radius:999px;font-weight:600;border:1px solid {bd};background:{bg};color:{fg}">{text}</div>
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def stepper():
+    """Indikator tahap Input – Simulasi – Hasil (tahap Hasil aktif bila hasil terbaru)."""
+    status, _ = ui_status()
+    now = 3 if status == "fresh" else 1
+
+    def circle(i):
+        base = ("width:26px;height:26px;min-width:26px;border-radius:50%;display:inline-flex;"
+                "align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;")
+        if i == now:
+            return base + "background:#1F5FD8;color:#fff;border:1px solid #1F5FD8"
+        if i < now:
+            return base + "background:#fff;color:#1F5FD8;border:1px solid #1F5FD8"
+        return base + "background:#fff;color:#5C6B80;border:1px solid #B9C6D6"
+
+    def step(i, text):
+        weight = "font-weight:700" if i == now else "font-weight:500;color:#5C6B80"
+        return (f'<span style="display:inline-flex;align-items:center;gap:6px;flex:none;white-space:nowrap">'
+                f'<span style="{circle(i)}">{i}</span><span style="{weight}">{text}</span></span>')
+
+    line = '<span style="flex:0 1 36px;min-width:8px;height:1px;background:#B9C6D6"></span>'
+    st.markdown(
+        f"""<div style="display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:nowrap">
+{step(1, "Input")}{line}{step(2, "Simulasi")}{line}{step(3, "Hasil")}</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def tile(label, value, unit, small=False):
+    """Kembalikan HTML satu kartu ringkas (label, nilai, satuan) untuk Pratinjau Hasil."""
+    size = 14 if small else 20
+    color = "#10233B" if value != "—" else "#8A97A8"
+    return (f'<div style="padding:10px 12px;border-radius:8px;background:#F3F6FA">'
+            f'<div style="font-size:11px;color:#5C6B80">{label}</div>'
+            f'<div style="font-size:{size}px;font-weight:700;color:{color};line-height:1.35;'
+            f'min-height:27px">{value}</div>'
+            f'<div style="font-size:10px;color:#5C6B80">{unit}</div></div>')
+
+
+def require_run():
+    """Kembalikan record hasil terakhir, atau tampilkan keadaan kosong (None)."""
+    run = get_run()
+    if run is None:
+        st.info("Belum ada hasil. Buka halaman **Data & Parameter**, periksa input, "
+                "lalu klik **Jalankan**.")
+        st.page_link("pages/data_parameter.py", label="Buka Data & Parameter")
+        return None
+    result_strip(run)
+    return run
+
+
+def result_strip(run):
+    """Strip metadata di atas hasil: skenario, periode, iterasi, seed, tanggal,
+    versi model, sumber data; plus peringatan bila input berubah sejak hasil."""
+    cfg = run["config"]
+    src = cfg["source"]
+    src_txt = src["status"]
+    detail = " ".join(x for x in (src["name"], src["year"]) if x)
+    if src["status"] == "Data Aktual" and detail:
+        src_txt += f" ({detail})"
+    st.caption(
+        f"Skenario aktif: **{cfg['scenario']}** · Periode analisis: 0–{cfg['T_end']} tahun · "
+        f"Iterasi: {cfg['n_sim']} · Seed: {cfg['seed']} · "
+        f"Dijalankan: {run['meta']['date'].replace('T', ' ')} · {run['meta']['model_version']} · "
+        f"Sumber data: {src_txt}"
+    )
+    if is_stale():
+        st.warning("Input berubah sejak simulasi terakhir — hasil di bawah masih memakai "
+                   "konfigurasi sebelumnya. Jalankan ulang di halaman Data & Parameter.")
+
+
+def unit_note():
+    """Catatan satuan variabel (E, D, P, L, t) di bawah judul halaman hasil."""
+    st.caption(f"Satuan: E, D = {VARIABLE_UNITS['E']}; P = {VARIABLE_UNITS['P']}; "
+               f"L = {VARIABLE_UNITS['L']}; t = {VARIABLE_UNITS['t']}.")

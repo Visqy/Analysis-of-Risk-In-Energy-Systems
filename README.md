@@ -5,9 +5,16 @@ dinamika sistem energi-ekonomi dan risiko ekonominya.
 
 🚧 **Under construction** — proyek riset yang masih dalam pengembangan.
 
-## Menjalankan Aplikasi
+## Menjalankan
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+## Test
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
 ```

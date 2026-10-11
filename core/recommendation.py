@@ -1,25 +1,36 @@
-"""Ranking skenario & rekomendasi keputusan (masukan dosen §2.3).
+"""Peringkat skenario dan rekomendasi berdasarkan total kerugian terendah.
 
-ΔLi = L_baseline - Li
-Ri  = ΔLi / L_baseline * 100%
+Untuk tiap skenario i:
+    ΔL_i = L_baseline − L_i            (pengurangan kerugian)
+    R_i  = ΔL_i / L_baseline × 100%    (persentase penurunan)
 
-Selalu menghitung SEMUA skenario di SCENARIOS (bukan cuma yang dipilih di
-multiselect sidebar) karena rekomendasi butuh baseline sebagai acuan yang
-konsisten, terlepas dari apa yang sedang ditampilkan di halaman
-Perbandingan Skenario.
+Selalu menghitung SEMUA skenario di `SCENARIOS`, bukan hanya yang sedang
+ditampilkan di halaman Perbandingan Skenario, supaya baseline menjadi acuan
+yang konsisten. Kriteria tunggal: total kerugian ekonomi paling rendah.
 """
 
 from core.model import simulate, trapz as _trapz
 from core.scenarios import SCENARIOS, BASELINE_NAME, DEFAULT_Y0
 
 
-def compute_ranking(base_params, t):
-    """Kembalikan list of dict (sudah diurutkan dari kerugian terkecil,
-    dengan field 'rank' 1..N) dan total kerugian baseline."""
+def compute_ranking(base_params, t, y0=None):
+    """Hitung dan urutkan semua skenario berdasarkan total kerugian.
+
+    Args:
+        base_params: parameter dasar (di-override per skenario).
+        t: grid waktu.
+        y0: kondisi awal [E0, D0, P0]; default `DEFAULT_Y0`.
+
+    Returns:
+        (rows, baseline_loss): `rows` urut dari kerugian terkecil, tiap elemen
+        dict {"Skenario", "loss", "delta" (ΔL), "pct" (R, persen), "rank"};
+        `baseline_loss` = total kerugian skenario baseline.
+    """
+    y0 = DEFAULT_Y0 if y0 is None else y0
     rows = []
     for name, override in SCENARIOS.items():
         p = dict(base_params); p.update(override)
-        _, _, _, L = simulate(p, DEFAULT_Y0, t)
+        _, _, _, L = simulate(p, y0, t)
         rows.append({"Skenario": name, "loss": _trapz(L, t)})
 
     baseline_loss = next(r["loss"] for r in rows if r["Skenario"] == BASELINE_NAME)

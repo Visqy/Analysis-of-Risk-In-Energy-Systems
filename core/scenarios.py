@@ -1,6 +1,10 @@
-"""
-Skenario, parameter default, dan metadata parameter (persis sama dengan
-notebook riset, cell 7) — plus PARAM_META untuk panel Data & Parameter.
+"""Definisi skenario kebijakan, parameter bawaan, dan metadata parameter.
+
+- `SCENARIOS`: nama skenario -> override parameter relatif terhadap baseline.
+- `DEFAULT_PARAMS`, `DEFAULT_Y0`: parameter dan kondisi awal bawaan.
+- `PARAM_META` / `Y0_META`: label, rentang, langkah, nilai bawaan, dan satuan
+  yang dipakai validasi input dan tabel dokumentasi.
+- `VARIABLE_UNITS`: satuan variabel keadaan untuk grafik, kartu, dan tabel.
 """
 
 SCENARIOS = {
@@ -20,11 +24,10 @@ DEFAULT_Y0 = [50.0, 45.0, 20.0]  # E0, D0, P0
 
 BASELINE_NAME = "Baseline (Business as Usual)"
 
-# Jawaban dosen pembimbing (2026-09-20): parameter masih ilustratif, belum
-# dikalibrasi data empiris — satuan pakai "unit model" generik untuk
-# parameter, dan satuan relatif/indeks untuk variabel keadaan (lihat
-# VARIABLE_UNITS di bawah). Setelah ada data empiris, ganti ke satuan
-# sebenarnya (MW/GWh/TWh, Rp/kWh, juta/miliar rupiah, dst).
+# Parameter bersifat ilustratif (belum dikalibrasi data empiris): parameter
+# memakai satuan generik "unit model" dan variabel keadaan memakai satuan
+# relatif/indeks (lihat VARIABLE_UNITS). Setelah ada data empiris, ganti ke
+# satuan sebenarnya (mis. MW/GWh, Rp/kWh).
 DATA_TYPE_LABEL = "Asumsi/Ilustratif"
 SOURCE_LABEL = "Skenario simulasi penelitian"
 PARAM_DISCLAIMER = (

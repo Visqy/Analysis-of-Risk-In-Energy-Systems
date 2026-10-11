@@ -1,5 +1,6 @@
 # Project/research notes — not part of the deployed app
 CLAUDE.md
+AGENTS.md
 docs/
 
 # Claude Code local tooling (dev-only, not needed for deploy)
