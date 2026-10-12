@@ -1,8 +1,8 @@
 """Halaman Data & Parameter: satu-satunya tempat input.
 
 Berisi pilihan skenario dan sumber data, kondisi awal dan horizon, parameter
-model, pengaturan analisis risiko (iterasi, tingkat keyakinan, seed,
-distribusi, σ), Mode Eksplorasi Cepat (slider tersinkron dengan kotak angka),
+model, pengaturan analisis risiko (iterasi, tingkat keyakinan, seed, σ, dan
+penjelasan metode distribusi Normal terpotong), Mode Eksplorasi Cepat (slider tersinkron dengan kotak angka),
 panel Konfigurasi Aktif dan Pratinjau Hasil, tombol Jalankan Simulasi dan
 Kembalikan ke Nilai Awal, skenario kustom, impor xlsx, serta dokumentasi
 parameter. Input divalidasi per field; tombol Jalankan nonaktif bila ada input
@@ -15,7 +15,7 @@ import streamlit as st
 from core.formatting import id_number
 from core.io_xlsx import parse_import_workbook
 from core.inputs import (
-    DIST_OPTIONS, FIELD_SPECS, HELP, LATEX_LABEL, PARAM_KEYS, SHORT_DESC, SIGMA_KEYS,
+    FIELD_SPECS, HELP, LATEX_LABEL, PARAM_KEYS, SHORT_DESC, SIGMA_KEYS,
     SOURCE_OPTIONS, range_text, scenario_names,
 )
 from core.scenarios import (
@@ -35,7 +35,7 @@ status, n_err = ui_status()
 
 
 def _flow_html():
-    steps = ["Input & validasi", "Simulasi model", "Risiko & skenario", "Rekomendasi"]
+    steps = ["Input & validasi", "Simulasi model", "Risiko & skenario", "Peringkat skenario"]
     rows = []
     for n, label in enumerate(steps):
         line = ('<div style="width:2px;height:14px;background:#B9C6D6;margin:2px 0 2px 11px"></div>'
@@ -77,8 +77,8 @@ with st.container(key="titlebar"):
 st.caption("Masukkan nilai, periksa konfigurasi, lalu jalankan simulasi.")
 
 if s.pop("_just_ran", False):
-    st.success("Simulasi selesai. Buka halaman Dinamika Sistem, Analisis Kestabilan, "
-               "Analisis Risiko, Perbandingan Skenario, atau Rekomendasi untuk melihat hasil.")
+    st.success("Simulasi selesai. Buka halaman Dinamika Sistem, Analisis Risiko, "
+               "Perbandingan Skenario, atau Peringkat Skenario untuk melihat hasil.")
 
 st.warning(f"**Mode prototipe.** {PARAM_DISCLAIMER}")
 
@@ -115,10 +115,6 @@ with left:
         st.subheader("Pengaturan Analisis Risiko")
         st.caption("Gunakan nilai yang dapat direplikasi.")
         row_of_fields(["n_sim", "conf", "seed"], per_row=3)
-        st.selectbox("Distribusi ketidakpastian", list(DIST_OPTIONS.keys()),
-                     format_func=lambda k: DIST_OPTIONS[k], **bind("dist_kind"))
-        st.caption("Nilai parameter acak tidak negatif dan tetap dalam rentang parameter "
-                   "(untuk Normal terpotong).")
         with st.expander("Ketidakpastian parameter (σ)"):
             row_of_fields(SIGMA_KEYS, per_row=3)
 
@@ -174,11 +170,10 @@ with right:
             if status == "stale":
                 st.caption("Hasil usang: input berubah sejak simulasi terakhir.")
             else:
-                st.caption(f"Skenario aktif: {run['config']['scenario']} · "
-                           f"periode 0–{run['config']['T_end']} tahun")
+                st.caption(f"Skenario aktif: {run['config']['scenario']}, "
+                           f"periode 0–{run['config']['T_end']} tahun.")
         L_unit, E_unit = VARIABLE_UNITS["L"], VARIABLE_UNITS["E"]
         tiles = [
-            tile("Indeks Risiko", "Belum tersedia", "segera hadir", small=True),
             tile(f"VaR {conf_txt}%", vals["var"], L_unit),
             tile(f"CVaR {conf_txt}%", vals["cvar"], L_unit),
             tile("Energi akhir, E(T)", vals["E"], E_unit),
@@ -195,7 +190,8 @@ with st.container(border=True):
         if errors:
             st.markdown(f":red[**✕ {n_err} input perlu diperbaiki sebelum simulasi dapat dijalankan.**]")
         else:
-            st.markdown(":green[**✓ Semua input valid**] · Konfigurasi tersimpan selama sesi")
+            st.markdown(":green[**✓ Semua input valid**]")
+            st.caption("Konfigurasi tersimpan selama sesi.")
     reset_clicked = b2.button("Kembalikan ke Nilai Awal", width="stretch")
     run_clicked = b3.button("Jalankan Simulasi", type="primary", width="stretch",
                             disabled=bool(errors))

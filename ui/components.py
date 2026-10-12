@@ -2,8 +2,8 @@
 
 import streamlit as st
 
+from core.interpretation import CATATAN_PROTOTIPE
 from core.state import get_run, is_stale, ui_status
-from core.scenarios import VARIABLE_UNITS
 
 _BADGES = {
     "invalid": ("Input belum valid", "#FDECEA", "#8F1D15", "#F2B8B2"),
@@ -93,27 +93,58 @@ def require_run():
     return run
 
 
+def chips(items):
+    """Baris item metadata: label kecil abu-abu di atas, nilai tebal di bawah.
+
+    Args:
+        items: list (label, nilai); item dibungkus per item pada layar sempit.
+    """
+    cells = "".join(
+        '<div style="min-width:0">'
+        f'<div style="font-size:11px;color:#5C6B80;line-height:1.3">{label}</div>'
+        f'<div style="font-size:13px;font-weight:600;color:#10233B;line-height:1.4">{value}</div>'
+        "</div>"
+        for label, value in items)
+    st.markdown(
+        '<div style="display:flex;flex-wrap:wrap;gap:8px 28px;padding:2px 0 14px">'
+        f"{cells}</div>", unsafe_allow_html=True)
+
+
 def result_strip(run):
-    """Strip metadata di atas hasil: skenario, periode, iterasi, seed, tanggal,
-    versi model, sumber data; plus peringatan bila input berubah sejak hasil."""
+    """Strip metadata di atas hasil: skenario, periode, iterasi, seed, tanggal
+    analisis, dan sumber data (versi model ada di footer); plus peringatan bila
+    input berubah sejak hasil."""
     cfg = run["config"]
     src = cfg["source"]
     src_txt = src["status"]
     detail = " ".join(x for x in (src["name"], src["year"]) if x)
     if src["status"] == "Data Aktual" and detail:
         src_txt += f" ({detail})"
-    st.caption(
-        f"Skenario aktif: **{cfg['scenario']}** · Periode analisis: 0–{cfg['T_end']} tahun · "
-        f"Iterasi: {cfg['n_sim']} · Seed: {cfg['seed']} · "
-        f"Dijalankan: {run['meta']['date'].replace('T', ' ')} · {run['meta']['model_version']} · "
-        f"Sumber data: {src_txt}"
-    )
+    chips([
+        ("Skenario aktif", cfg["scenario"]),
+        ("Periode analisis", f"0–{cfg['T_end']} tahun"),
+        ("Iterasi", cfg["n_sim"]),
+        ("Seed", cfg["seed"]),
+        ("Dijalankan", run["meta"]["date"].replace("T", " ")),
+        ("Sumber data", src_txt),
+    ])
     if is_stale():
         st.warning("Input berubah sejak simulasi terakhir — hasil di bawah masih memakai "
                    "konfigurasi sebelumnya. Jalankan ulang di halaman Data & Parameter.")
 
 
-def unit_note():
-    """Catatan satuan variabel (E, D, P, L, t) di bawah judul halaman hasil."""
-    st.caption(f"Satuan: E, D = {VARIABLE_UNITS['E']}; P = {VARIABLE_UNITS['P']}; "
-               f"L = {VARIABLE_UNITS['L']}; t = {VARIABLE_UNITS['t']}.")
+def interpretation_card(text):
+    """Tampilkan satu interpretasi (Temuan/Makna/Implikasi) dalam satu card netral."""
+    with st.container(border=True):
+        st.markdown(text)
+
+
+def prototype_note():
+    """Catatan tetap di akhir halaman hasil: hasil prototipe, bukan rekomendasi kebijakan nyata."""
+    st.caption(CATATAN_PROTOTIPE)
+
+
+def metric_unit(container, label, value, unit):
+    """Kartu angka `container.metric(label, value)` dengan satuan sebagai keterangan kecil di bawahnya."""
+    container.metric(label, value)
+    container.caption(unit)

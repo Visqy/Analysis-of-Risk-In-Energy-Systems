@@ -44,7 +44,7 @@ def test_ringkasan_memuat_metadata(xlsx_bytes):
     assert items["Versi model"] == "ARIES v0.1"
     assert items["Seed acak"] == 2026
     assert items["Jumlah iterasi"] == 100
-    assert items["Indeks risiko"] == "Belum tersedia"
+    assert "Indeks risiko" not in items
     assert any("Interval kuantil" in k for k in items)
     assert not any("kepercayaan" in k.lower() for k in items)
 
@@ -56,7 +56,7 @@ def test_round_trip(xlsx_bytes):
         assert updates[f"in_{k}"] == default_text(k) or k == "n_sim"
     assert updates["in_n_sim"] == "100"
     assert updates["scenario_name"] == "Baseline (Business as Usual)"
-    assert updates["dist_kind"] == "truncnormal"
+    assert "dist_kind" not in updates
 
 
 def test_tolak_di_luar_rentang(xlsx_bytes):
@@ -112,3 +112,12 @@ def test_sumber_data_di_ringkasan_dan_round_trip():
     assert errors == []
     assert updates["source_status"] == "Data Aktual"
     assert updates["source_name"] == "Statistik PLN" and updates["source_year"] == "2024"
+
+
+def test_perbandingan_memuat_peringkat_risiko(xlsx_bytes):
+    ws = openpyxl.load_workbook(io.BytesIO(xlsx_bytes))["Perbandingan Skenario"]
+    header = [c.value for c in ws[1]]
+    assert "Peringkat Risiko (CVaR 95%)" in header and "CVaR 95%" in header and "VaR 95%" in header
+    rank_idx = header.index("Peringkat Risiko (CVaR 95%)")
+    ranks = sorted(row[rank_idx].value for row in ws.iter_rows(min_row=2, max_row=6))
+    assert ranks == [1, 2, 3, 4, 5]

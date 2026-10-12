@@ -70,6 +70,7 @@ header[data-testid="stHeader"] { background: #FFFFFF !important; box-shadow: 0 1
     .modebar {
         display: none !important;
     }
+    div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stAlert"],
     div[data-testid="stPlotlyChart"],
     div[data-testid="stDataFrame"],
@@ -106,10 +107,10 @@ pg = st.navigation([
     st.Page("pages/dashboard.py", title="Dashboard", icon="📊"),
     st.Page("pages/data_parameter.py", title="Data & Parameter", icon="🗂️"),
     st.Page("pages/dinamika_sistem.py", title="Dinamika Sistem", icon="📈"),
-    st.Page("pages/analisis_kestabilan.py", title="Analisis Kestabilan", icon="🧮"),
     st.Page("pages/analisis_risiko.py", title="Analisis Risiko", icon="🎲"),
     st.Page("pages/perbandingan_skenario.py", title="Perbandingan Skenario", icon="⚖️"),
-    st.Page("pages/rekomendasi.py", title="Rekomendasi", icon="✅"),
+    st.Page("pages/rekomendasi.py", title="Peringkat Skenario", icon="✅",
+            url_path="peringkat_skenario"),
     st.Page("pages/laporan.py", title="Laporan", icon="📄"),
 ])
 

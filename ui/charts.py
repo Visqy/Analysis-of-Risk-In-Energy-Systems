@@ -53,6 +53,22 @@ def line_chart(t, y, color, fill=False, y_unit=None):
     return localize(fig, x_hover=".1f", y_hover=".2f")
 
 
+def multi_line_chart(t, series, y_unit=None):
+    """Grafik beberapa garis pada grid waktu yang sama.
+
+    Args:
+        t: grid waktu.
+        series: list (nama, nilai, warna), mis. kapasitas dan permintaan.
+        y_unit: satuan untuk judul sumbu-Y.
+    """
+    fig = go.Figure()
+    for name, y, color in series:
+        fig.add_trace(go.Scatter(x=t, y=y, mode="lines", name=name, line=dict(color=color)))
+    fig.update_layout(xaxis_title="t (tahun)", yaxis_title=y_unit, height=CHART_HEIGHT,
+                      margin=CHART_MARGIN, legend=dict(font=dict(size=12)))
+    return localize(fig, x_hover=".1f", y_hover=".2f")
+
+
 def histogram_chart(losses, var, conf, unit=""):
     """Histogram total kerugian Monte Carlo dengan garis VaR.
 

@@ -65,7 +65,7 @@ def build_export_workbook(run):
     """Bangun laporan xlsx dari snapshot `run` dan kembalikan isinya (bytes).
 
     Memuat input, asumsi, metadata (seed, tanggal, versi), hasil simulasi,
-    perbandingan skenario, ringkasan Monte Carlo (interval kuantil 95%), dan
+    perbandingan skenario (peringkat berdasarkan total kerugian dan berdasarkan risiko/CVaR), ringkasan Monte Carlo (interval kuantil 95%), dan
     grafik: dinamika E/D/P/L, total kerugian per skenario, histogram, tornado.
     """
     cfg = run["config"]
@@ -91,7 +91,6 @@ def build_export_workbook(run):
             ("Status sumber data", src["status"]),
             ("Sumber data", src["name"]),
             ("Tahun data", src["year"]),
-            ("Indeks risiko", "Belum tersedia"),
             (f"VaR {conf_pct}% ({VARIABLE_UNITS['L']})", run["var"]),
             (f"CVaR {conf_pct}% ({VARIABLE_UNITS['L']})", run["cvar"]),
             (f"Interval kuantil 95% bawah (persentil 2,5)", float(q_low)),
@@ -108,7 +107,7 @@ def build_export_workbook(run):
         rows = [{"Key": k, "Parameter": FIELD_SPECS[k]["label"], "Nilai": values[k],
                  "Satuan": FIELD_SPECS[k]["unit"], "Min": FIELD_SPECS[k]["min"],
                  "Max": FIELD_SPECS[k]["max"]} for k in ALL_KEYS]
-        extras = {"scenario_name": cfg["scenario"], "dist_kind": cfg["dist"],
+        extras = {"scenario_name": cfg["scenario"],
                   "source_status": src["status"], "source_name": src["name"],
                   "source_year": src["year"]}
         rows += [{"Key": k, "Parameter": k, "Nilai": v, "Satuan": "", "Min": "", "Max": ""}
@@ -129,14 +128,18 @@ def build_export_workbook(run):
         _scatter(ws, "Kerugian ekonomi L(t)", 1, [5], n, "H34", VARIABLE_UNITS["L"])
 
         rank_rows = run["ranking"]
+        risk = {r["Skenario"]: r for r in run["ranking_risk"]}
         pd.DataFrame([
             {"Peringkat": r["rank"], "Skenario": r["Skenario"],
              f"Total Kerugian ({VARIABLE_UNITS['L']})": float(r["loss"]),
-             "Penurunan (absolut)": float(r["delta"]), "Penurunan (%)": float(r["pct"])}
+             "Penurunan (absolut)": float(r["delta"]), "Penurunan (%)": float(r["pct"]),
+             f"Peringkat Risiko (CVaR {conf_pct}%)": risk[r["Skenario"]]["rank"],
+             f"CVaR {conf_pct}%": float(risk[r["Skenario"]]["cvar"]),
+             f"VaR {conf_pct}%": float(risk[r["Skenario"]]["var"])}
             for r in rank_rows
         ]).to_excel(writer, sheet_name="Perbandingan Skenario", index=False)
         ws = writer.sheets["Perbandingan Skenario"]
-        _bar(ws, "Total kerugian per skenario", 2, 3, len(rank_rows), "H2", VARIABLE_UNITS["L"])
+        _bar(ws, "Total kerugian per skenario", 2, 3, len(rank_rows), "J2", VARIABLE_UNITS["L"])
 
         stats = pd.DataFrame([
             ("Jumlah iterasi", cfg["n_sim"]), ("Seed acak", cfg["seed"]),
@@ -247,8 +250,6 @@ def parse_import_workbook(file):
     sc = txt("scenario_name")
     if sc in scenario_names():
         updates["scenario_name"] = sc
-    if txt("dist_kind") in DIST_OPTIONS:
-        updates["dist_kind"] = txt("dist_kind")
     if txt("source_status") in SOURCE_OPTIONS:
         updates["source_status"] = txt("source_status")
         updates["source_name"] = txt("source_name")

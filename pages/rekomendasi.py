@@ -1,27 +1,33 @@
-"""Halaman Rekomendasi: peringkat skenario dan skenario dengan kerugian terendah.
+"""Halaman Peringkat Skenario Berdasarkan Total Kerugian.
 
-Menampilkan tabel peringkat (total kerugian, pengurangan, persentase penurunan
-terhadap baseline), kartu rekomendasi utama, catatan batasan, dan tabel
-pertimbangan implementasi (biaya dan kelayakan belum dimodelkan). Kriteria
-tunggal: total kerugian ekonomi paling rendah. Data dari `last_run["ranking"]`.
+Menampilkan dua tabel peringkat terpisah: berdasarkan total kerugian
+(pengurangan dan persentase penurunan terhadap baseline; `last_run["ranking"]`)
+dan berdasarkan risiko, yaitu CVaR dari Monte Carlo tiap skenario
+(`last_run["ranking_risk"]`), disertai interpretasi perbandingan keduanya.
+Interpretasi menyatakan skenario dengan kerugian terendah berdasarkan model saat
+ini (atau bahwa tidak ada skenario yang lebih baik dari baseline), lalu catatan
+batasan dan tabel pertimbangan implementasi (biaya dan kelayakan belum
+dimodelkan).
 """
 
 import pandas as pd
 import streamlit as st
 
 from core.formatting import id_number
-from core.recommendation import get_recommendation
+from core.interpretation import interpret_ranking_basis
 from core.scenarios import BASELINE_NAME, VARIABLE_UNITS
-from ui.components import require_run
+from ui.components import interpretation_card, prototype_note, require_run
 
-st.header("Rekomendasi")
+st.header("Peringkat Skenario Berdasarkan Total Kerugian")
 
 run = require_run()
 if run is not None:
     rows = run["ranking"]
-    top, beats_baseline = get_recommendation(rows)
 
-    st.markdown("##### Peringkat Skenario")
+    conf_pct = int(round(run["config"]["conf"] * 100))
+    L_UNIT = VARIABLE_UNITS["L"]
+
+    st.markdown("##### Peringkat Berdasarkan Total Kerugian")
     st.caption("Diurutkan dari total kerugian ekonomi terkecil, dihitung untuk SEMUA skenario "
                "terhadap baseline pada konfigurasi yang dijalankan.")
     st.dataframe(pd.DataFrame([
@@ -34,23 +40,26 @@ if run is not None:
         } for r in rows
     ]), hide_index=True)
 
-    st.markdown("##### Rekomendasi Utama")
-    if beats_baseline:
-        st.success(
-            f"**Rekomendasi Utama: {top['Skenario']}**\n\n"
-            f"Total kerugian: {id_number(top['loss'])} {VARIABLE_UNITS['L']}. "
-            f"Penurunan dibandingkan baseline: {id_number(top['delta'])} atau "
-            f"{id_number(top['pct'])}%. Skenario ini merupakan **skenario dengan kerugian "
-            f"terendah berdasarkan model saat ini** (dasar: minimum total kerugian ekonomi)."
-        )
-    else:
-        st.warning("Tidak terdapat skenario intervensi yang lebih baik daripada baseline "
-                   "berdasarkan parameter saat ini.")
+    st.markdown(f"##### Peringkat Berdasarkan Risiko (CVaR {conf_pct}%)")
+    st.caption(f"Diurutkan dari CVaR {conf_pct}% terkecil, yaitu rata-rata kerugian pada kondisi "
+               "terburuk dari simulasi Monte Carlo yang dijalankan untuk tiap skenario "
+               "(iterasi, seed, dan distribusi sama dengan analisis utama).")
+    rows_risk = run["ranking_risk"]
+    st.dataframe(pd.DataFrame([
+        {
+            "Peringkat": r["rank"],
+            "Skenario": r["Skenario"],
+            f"CVaR {conf_pct}% ({L_UNIT})": id_number(r["cvar"]),
+            f"VaR {conf_pct}% ({L_UNIT})": id_number(r["var"]),
+            "Penurunan CVaR (%)": f"{id_number(r['cvar_pct'])}%",
+        } for r in rows_risk
+    ]), hide_index=True)
+    interpretation_card(interpret_ranking_basis(rows, rows_risk, conf_pct, BASELINE_NAME))
 
     st.caption(
-        "**Catatan:** Rekomendasi prototipe hanya didasarkan pada total kerugian hasil "
-        "simulasi. Biaya implementasi, kelayakan teknis, dampak lingkungan, dan faktor "
-        "kelembagaan belum diperhitungkan."
+        "**Catatan:** Peringkat ini hanya didasarkan pada total kerugian hasil simulasi. "
+        "Biaya implementasi, kelayakan teknis, dampak lingkungan, dan faktor kelembagaan "
+        "belum diperhitungkan, dan hasilnya belum menjadi rekomendasi kebijakan nyata."
     )
 
     st.markdown("##### Pertimbangan Implementasi Kebijakan")
@@ -67,3 +76,5 @@ if run is not None:
             "Kelayakan Teknis": "Acuan" if r["Skenario"] == BASELINE_NAME else "Belum dinilai",
         } for r in sorted(rows, key=lambda r: r["rank"])
     ]), hide_index=True)
+
+    prototype_note()

@@ -2,6 +2,7 @@ import pytest
 
 from core.inputs import build_config, validate_all
 from core.run import config_key
+from core.state import DEFAULT_DIST
 from tests.conftest import (
     RESULT_PAGES, click, make_app, open_data_page, page_texts, ran_app, run_button, set_text,
 )
@@ -21,7 +22,7 @@ def _status(at):
     assert not errors
     source = {"status": s["source_status"], "name": s["source_name"].strip(),
               "year": s["source_year"].strip()}
-    cfg = build_config(values, s["scenario_name"], s["dist_kind"], source)
+    cfg = build_config(values, s["scenario_name"], DEFAULT_DIST, source)
     return "fresh" if config_key(cfg) == s["last_run"]["config_key"] else "stale"
 
 
@@ -99,7 +100,9 @@ def test_status_sumber_data_muncul_di_strip_dan_laporan():
     src = at.session_state["last_run"]["config"]["source"]
     assert src == {"status": "Data Aktual", "name": "Statistik PLN", "year": "2024"}
     at = at.switch_page("pages/dashboard.py").run()
-    assert any("Sumber data: Data Aktual (Statistik PLN 2024)" in c.value for c in at.caption)
+    teks = " ".join(m.value for m in at.markdown)
+    assert "Sumber data" in teks and "Data Aktual (Statistik PLN 2024)" in teks
+    assert "ARIES v0.1" not in teks
 
 
 def test_label_tombol_dan_keterangan_input():
@@ -111,3 +114,14 @@ def test_label_tombol_dan_keterangan_input():
     # keterangan singkat digabung ke tooltip bersama definisi simbol
     e0 = at.text_input(key="w_in_E0")
     assert "Kapasitas energi pada awal periode" in e0.help and "dE" in e0.help
+
+
+def test_peringkat_tanpa_kartu_terpisah_dan_tanpa_pilihan_distribusi():
+    at = ran_app()
+    at = at.switch_page("pages/rekomendasi.py").run()
+    teks = " ".join(m.value for m in at.markdown)
+    assert "Skenario dengan Kerugian Terendah" not in teks
+    assert "skenario dengan kerugian terendah berdasarkan model saat ini" in teks
+    assert not at.success
+    at = at.switch_page("pages/data_parameter.py").run()
+    assert not any(s.label == "Distribusi ketidakpastian" for s in at.selectbox)

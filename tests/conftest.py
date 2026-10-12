@@ -43,7 +43,7 @@ def small_run():
 # ---------- helper AppTest ----------
 
 DATA_PAGE = "pages/data_parameter.py"
-RESULT_PAGES = ["pages/dashboard.py", "pages/dinamika_sistem.py", "pages/analisis_kestabilan.py",
+RESULT_PAGES = ["pages/dashboard.py", "pages/dinamika_sistem.py",
                 "pages/analisis_risiko.py", "pages/perbandingan_skenario.py",
                 "pages/rekomendasi.py", "pages/laporan.py"]
 

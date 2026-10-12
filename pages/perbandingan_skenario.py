@@ -16,7 +16,7 @@ from core.model import simulate, trapz
 from core.scenarios import BASELINE_NAME, SCENARIOS, VARIABLE_UNITS
 from core.state import bind
 from ui.charts import CHART_HEIGHT, CHART_MARGIN, COLORS, SCENARIO_COLORS, line_chart, localize
-from ui.components import require_run, unit_note
+from ui.components import interpretation_card, metric_unit, prototype_note, require_run
 
 st.header("Perbandingan Skenario Kebijakan")
 
@@ -25,7 +25,6 @@ if run is not None:
     base = run["base_params"]
     y0 = run["config"]["y0"]
     t = run["t"]
-    unit_note()
 
     st.multiselect("Skenario yang ditampilkan", list(SCENARIOS.keys()),
                    **bind("selected_scenarios"),
@@ -41,7 +40,7 @@ if run is not None:
         st.markdown(f"Skenario terpilih: **{name}**")
         st.markdown("##### Kerugian Ekonomi $L(t)$")
         st.plotly_chart(line_chart(t, L_i, COLORS["L"], fill=True, y_unit=VARIABLE_UNITS["L"]))
-        st.metric(f"Total Kerugian Kumulatif ({VARIABLE_UNITS['L']})", id_number(trapz(L_i, t)))
+        metric_unit(st, "Total Kerugian Kumulatif", id_number(trapz(L_i, t)), VARIABLE_UNITS["L"])
         st.caption("Pilih 2+ skenario untuk grafik perbandingan.")
     else:
         names, losses, curves = [], [], {}
@@ -60,7 +59,8 @@ if run is not None:
                               legend=dict(font=dict(size=12)))
         localize(fig_cmp, x_hover=".1f", y_hover=".2f")
         st.plotly_chart(fig_cmp)
-        st.caption(interpret_comparison(names, losses, curves, t, run["baseline_loss"], BASELINE_NAME))
+        interpretation_card(interpret_comparison(
+            names, losses, curves, t, run["baseline_loss"], BASELINE_NAME))
 
         st.markdown("##### Total Kerugian Ekonomi Kumulatif")
         fig_bar = go.Figure(go.Bar(x=names, y=losses, marker_color="#F4A261"))
@@ -74,3 +74,5 @@ if run is not None:
                                    f"Total Kerugian ({VARIABLE_UNITS['L']})":
                                        [id_number(v) for v in losses]}),
                      hide_index=True)
+
+    prototype_note()

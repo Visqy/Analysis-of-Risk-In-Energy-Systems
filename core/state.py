@@ -6,7 +6,7 @@ Simulasi -> `last_run` (snapshot hasil). Halaman hasil hanya membaca
 berstatus "usang" (`ui_status`).
 
 Kunci state:
-    in_<field>, scenario_name, dist_kind, source_*  nilai kanonik input
+    in_<field>, scenario_name, source_*  nilai kanonik input
     w_<nama>      key widget (disalin dari kunci kanonik lewat `bind`)
     last_run      snapshot hasil (`core.run.run_simulation`) atau None
     custom_scenarios, selected_scenarios, quick_mode
@@ -31,14 +31,13 @@ DEFAULT_SCENARIO = list(SCENARIOS.keys())[0]
 DEFAULT_DIST = "truncnormal"
 
 # Key state non-field yang ikut disimpan di skenario kustom.
-EXTRA_KEYS = ["scenario_name", "dist_kind", "source_status", "source_name", "source_year"]
+EXTRA_KEYS = ["scenario_name", "source_status", "source_name", "source_year"]
 
 
 def _defaults():
     d = {f"in_{k}": default_text(k) for k in ALL_KEYS}
     d.update({
         "scenario_name": DEFAULT_SCENARIO,
-        "dist_kind": DEFAULT_DIST,
         "source_status": "Ilustratif/Asumsi",
         "source_name": "",
         "source_year": "",
@@ -120,7 +119,7 @@ def current_config():
     s = st.session_state
     source = {"status": s["source_status"], "name": s["source_name"].strip(),
               "year": s["source_year"].strip()}
-    cfg = build_config(values, s["scenario_name"], s["dist_kind"], source)
+    cfg = build_config(values, s["scenario_name"], DEFAULT_DIST, source)
     return cfg, {}
 
 

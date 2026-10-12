@@ -19,12 +19,10 @@ def test_input_bertahan_saat_pindah_halaman():
 def test_pilihan_dropdown_dan_sumber_bertahan():
     at = open_data_page(make_app())
     at.selectbox(key="w_scenario_name").select("Subsidi Energi").run()
-    at.selectbox(key="w_dist_kind").select("normal").run()
     at.selectbox(key="w_source_status").select("Data Aktual").run()
     at = at.switch_page("pages/rekomendasi.py").run()
     at = at.switch_page("pages/data_parameter.py").run()
     assert at.selectbox(key="w_scenario_name").value == "Subsidi Energi"
-    assert at.selectbox(key="w_dist_kind").value == "normal"
     assert at.selectbox(key="w_source_status").value == "Data Aktual"
 
 

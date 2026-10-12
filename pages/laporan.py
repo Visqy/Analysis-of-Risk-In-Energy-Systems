@@ -6,7 +6,7 @@ Kosong bila simulasi belum dijalankan.
 
 import streamlit as st
 
-from core.io_xlsx import APP_VERSION, build_export_workbook
+from core.io_xlsx import build_export_workbook
 from ui.components import require_run
 
 st.header("Laporan")
@@ -26,6 +26,3 @@ if run is not None:
     st.info("Sistem ini masih berupa **prototipe penelitian** dan nilai bawaan masih bersifat "
             "ilustratif.")
 
-st.markdown("---")
-st.markdown("##### Informasi Versi Model")
-st.caption(APP_VERSION)
