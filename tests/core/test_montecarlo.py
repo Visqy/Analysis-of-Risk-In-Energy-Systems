@@ -30,7 +30,6 @@ def test_truncnormal_dalam_batas(mean, std, lo, hi):
 def test_truncnormal_std_nol_mengembalikan_mean():
     rng = np.random.default_rng(0)
     assert _truncated_normal(rng, 0.08, 0.0, 0.01, 0.5) == 0.08
-    assert _truncated_normal(rng, 9.0, 0.0, 0.01, 0.5) == 0.5
 
 
 def test_parameter_acak_tidak_pernah_nol(small_run):
@@ -58,3 +57,18 @@ def test_monte_carlo_tanpa_ketidakpastian_konstan(small_run):
     t = small_run["t"]
     losses = monte_carlo_risk(base, small_run["config"]["y0"], t, {}, n_sim=5, seed=1)
     assert np.allclose(losses, losses[0])
+
+
+def test_truncnormal_tidak_memotong_ke_batas():
+    rng = np.random.default_rng(0)
+    with pytest.raises(ValueError):
+        _truncated_normal(rng, 9.0, 0.0, 0.01, 0.5)
+    with pytest.raises(ValueError):
+        _truncated_normal(rng, 9.0, 0.01, 0.01, 0.5, max_tries=50)
+
+
+def test_batas_pengacakan_sama_dengan_batas_validasi():
+    from core.inputs import FIELD_SPECS
+    from core.scenarios import PARAM_META
+    for k in ("delta", "gamma", "I0"):
+        assert (FIELD_SPECS[k]["min"], FIELD_SPECS[k]["max"]) == (PARAM_META[k]["min"], PARAM_META[k]["max"])

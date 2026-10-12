@@ -20,7 +20,7 @@ SIGMA_KEYS = ["sd_delta", "sd_gamma", "sd_I0"]
 SIGMA_TARGET = {"sd_delta": "delta", "sd_gamma": "gamma", "sd_I0": "I0"}
 
 DIST_OPTIONS = {
-    "truncnormal": "Normal terpotong (dalam rentang parameter)",
+    "truncnormal": "Distribusi normal terpotong dalam rentang parameter",
     "normal": "Normal dengan batas bawah (metode lama)",
 }
 

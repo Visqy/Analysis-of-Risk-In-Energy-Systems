@@ -6,8 +6,8 @@ dan berdasarkan risiko, yaitu CVaR dari Monte Carlo tiap skenario
 (`last_run["ranking_risk"]`), disertai interpretasi perbandingan keduanya.
 Interpretasi menyatakan skenario dengan kerugian terendah berdasarkan model saat
 ini (atau bahwa tidak ada skenario yang lebih baik dari baseline), lalu catatan
-batasan dan tabel pertimbangan implementasi (biaya dan kelayakan belum
-dimodelkan).
+batasan dan expander pertimbangan implementasi (biaya dan kelayakan tidak
+digunakan dalam pemeringkatan).
 """
 
 import pandas as pd
@@ -28,7 +28,7 @@ if run is not None:
     L_UNIT = VARIABLE_UNITS["L"]
 
     st.markdown("##### Peringkat Berdasarkan Total Kerugian")
-    st.caption("Diurutkan dari total kerugian ekonomi terkecil, dihitung untuk SEMUA skenario "
+    st.caption("Diurutkan dari total kerugian ekonomi terkecil, dihitung untuk semua skenario "
                "terhadap baseline pada konfigurasi yang dijalankan.")
     st.dataframe(pd.DataFrame([
         {
@@ -57,24 +57,21 @@ if run is not None:
     interpretation_card(interpret_ranking_basis(rows, rows_risk, conf_pct, BASELINE_NAME))
 
     st.caption(
-        "**Catatan:** Peringkat ini hanya didasarkan pada total kerugian hasil simulasi. "
-        "Biaya implementasi, kelayakan teknis, dampak lingkungan, dan faktor kelembagaan "
-        "belum diperhitungkan, dan hasilnya belum menjadi rekomendasi kebijakan nyata."
+        "**Catatan:** Peringkat skenario dihitung berdasarkan total kerugian dan risiko (CVaR). "
+        "Biaya implementasi, kelayakan teknis, dampak lingkungan, dan faktor kelembagaan tidak "
+        "digunakan dalam pemeringkatan dan perlu dipertimbangkan secara terpisah sebelum penerapan."
     )
 
-    st.markdown("##### Pertimbangan Implementasi Kebijakan")
-    st.caption(
-        "Pada versi prototipe, peringkat ditentukan berdasarkan total kerugian ekonomi. "
-        "Biaya implementasi dan kelayakan kebijakan memerlukan data tambahan dan penilaian "
-        "ahli sehingga belum dimasukkan dalam perhitungan."
-    )
-    st.dataframe(pd.DataFrame([
-        {
-            "Skenario": r["Skenario"],
-            f"Kerugian ({VARIABLE_UNITS['L']})": id_number(r["loss"]),
-            "Biaya Implementasi": "Tidak ada intervensi" if r["Skenario"] == BASELINE_NAME else "Belum dimodelkan",
-            "Kelayakan Teknis": "Acuan" if r["Skenario"] == BASELINE_NAME else "Belum dinilai",
-        } for r in sorted(rows, key=lambda r: r["rank"])
-    ]), hide_index=True)
+    with st.expander("Pertimbangan Implementasi Kebijakan"):
+        st.dataframe(pd.DataFrame([
+            {
+                "Skenario": r["Skenario"],
+                f"Kerugian ({VARIABLE_UNITS['L']})": id_number(r["loss"]),
+                "Biaya Implementasi": ("Tidak ada intervensi" if r["Skenario"] == BASELINE_NAME
+                                       else "Tidak digunakan dalam pemeringkatan"),
+                "Kelayakan Teknis": ("Acuan" if r["Skenario"] == BASELINE_NAME
+                                     else "Tidak digunakan dalam pemeringkatan"),
+            } for r in sorted(rows, key=lambda r: r["rank"])
+        ]), hide_index=True)
 
     prototype_note()

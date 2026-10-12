@@ -25,9 +25,9 @@ if run is not None:
     metric_unit(c2, f"VaR {conf_txt}%", id_number(run["var"]), VARIABLE_UNITS["L"])
     metric_unit(c3, f"CVaR {conf_txt}%", id_number(run["cvar"]), VARIABLE_UNITS["L"])
     c4, c5, c6 = st.columns(3)
-    metric_unit(c4, "$E(T)$", id_number(run["E"][-1]), VARIABLE_UNITS["E"])
-    metric_unit(c5, "$D(T)$", id_number(run["D"][-1]), VARIABLE_UNITS["D"])
-    metric_unit(c6, "$P(T)$", id_number(run["P"][-1]), VARIABLE_UNITS["P"])
+    metric_unit(c4, "Kapasitas Akhir $E(T)$", id_number(run["E"][-1]), VARIABLE_UNITS["E"])
+    metric_unit(c5, "Permintaan Akhir $D(T)$", id_number(run["D"][-1]), VARIABLE_UNITS["D"])
+    metric_unit(c6, "Harga Akhir $P(T)$", id_number(run["P"][-1]), VARIABLE_UNITS["P"])
 
     st.markdown("##### Peringkat Skenario")
     top, beats_baseline = get_recommendation(run["ranking"])

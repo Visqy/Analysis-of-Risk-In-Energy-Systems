@@ -1,5 +1,8 @@
 """Komponen UI bersama: header, stepper, tile, strip metadata hasil, dan keadaan kosong."""
 
+import base64
+from pathlib import Path
+
 import streamlit as st
 
 from core.interpretation import CATATAN_PROTOTIPE
@@ -148,3 +151,45 @@ def metric_unit(container, label, value, unit):
     """Kartu angka `container.metric(label, value)` dengan satuan sebagai keterangan kecil di bawahnya."""
     container.metric(label, value)
     container.caption(unit)
+
+
+_LOGO_PATH = Path(__file__).parent / "assets" / "logo_fmipa_unpad.webp"
+INSTITUTION_LINES = (
+    "Departemen Matematika",
+    "Fakultas Matematika dan Ilmu Pengetahuan Alam",
+    "Universitas Padjadjaran",
+)
+
+
+@st.cache_resource
+def _logo_data_uri():
+    """Logo FMIPA Unpad sebagai data URI (dibaca sekali, dipakai ulang di tiap run)."""
+    return "data:image/webp;base64," + base64.b64encode(_LOGO_PATH.read_bytes()).decode()
+
+
+def institution_footer(version_text):
+    """Footer dua kolom: kartu identitas institusi (kiri) dan teks versi (kanan).
+
+    Kartu berisi logo dan tiga baris nama institusi; pada lebar sempit teks turun
+    di bawah logo dan kedua kolom bertumpuk. Teks versi disembunyikan saat cetak
+    karena footer cetak (`@page`) sudah memuatnya.
+
+    Args:
+        version_text: teks versi yang ditampilkan di kolom kanan.
+    """
+    lines = "".join(
+        f'<div style="font-size:{14 if i == 0 else 12.5}px;font-weight:{700 if i == 0 else 500};'
+        f'color:{"#10233B" if i == 0 else "#5C6B80"};line-height:1.45">{x}</div>'
+        for i, x in enumerate(INSTITUTION_LINES))
+    st.markdown(
+        '<div class="aries-footer" style="display:flex;flex-wrap:wrap;align-items:center;'
+        'justify-content:space-between;gap:12px 24px">'
+        '<div class="aries-institution" style="display:flex;flex-wrap:wrap;align-items:center;'
+        'gap:10px 20px;padding:12px 16px;border:1px solid #DCE3EC;border-radius:10px;'
+        'background:#FFFFFF;flex:0 1 auto;min-width:0">'
+        f'<img src="{_logo_data_uri()}" alt="Logo FMIPA Unpad" '
+        'style="width:170px;max-width:100%;height:auto">'
+        f'<div style="min-width:0">{lines}</div></div>'
+        f'<div class="aries-footer-version" style="font-size:13px;color:#5C6B80">{version_text}</div>'
+        "</div>",
+        unsafe_allow_html=True)

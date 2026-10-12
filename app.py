@@ -16,7 +16,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import ScriptControlExcepti
 
 from core.state import init_state, apply_pending_updates
 from core.inputs import SHORT_UNIT
-from ui.components import header
+from ui.components import header, institution_footer
 
 st.set_page_config(page_title="ARIES — Energy Risk DSS", layout="wide")
 
@@ -66,15 +66,16 @@ header[data-testid="stHeader"] { background: #FFFFFF !important; box-shadow: 0 1
     section[data-testid="stSidebar"],
     #MainMenu,
     footer,
-    .st-key-appfooter,
     .modebar {
         display: none !important;
     }
+    .aries-footer-version { display: none !important; }
     div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stAlert"],
     div[data-testid="stPlotlyChart"],
     div[data-testid="stDataFrame"],
     div[data-testid="stMetric"],
+    .st-key-appfooter,
     div[data-testid="stMarkdownContainer"] h3,
     div[data-testid="stMarkdownContainer"] h5 {
         break-inside: avoid;
@@ -137,4 +138,4 @@ except Exception as exc:  # jangan tampilkan traceback mentah ke pengguna
 
 with st.container(key="appfooter"):
     st.markdown("---")
-    st.caption("ARIES v0.1 – Prototipe Penelitian")
+    institution_footer("ARIES v0.1 – Prototipe Penelitian")

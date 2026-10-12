@@ -125,3 +125,26 @@ def test_peringkat_tanpa_kartu_terpisah_dan_tanpa_pilihan_distribusi():
     assert not at.success
     at = at.switch_page("pages/data_parameter.py").run()
     assert not any(s.label == "Distribusi ketidakpastian" for s in at.selectbox)
+
+
+def test_peringkat_panel_pertimbangan_expander_tertutup_dan_catatan_baru():
+    at = ran_app()
+    at = at.switch_page("pages/rekomendasi.py").run()
+    ex = [e for e in at.expander if e.label == "Pertimbangan Implementasi Kebijakan"]
+    assert len(ex) == 1 and not ex[0].proto.expanded
+    teks = " ".join(c.value for c in at.caption)
+    assert "dihitung berdasarkan total kerugian dan risiko (CVaR)" in teks
+    assert "tidak digunakan dalam pemeringkatan" in teks
+    assert "Belum dimodelkan" not in " ".join(str(d.value) for d in at.dataframe)
+
+
+def test_identitas_institusi_di_footer_dua_kolom():
+    at = make_app()
+    footer = [m.value for m in at.markdown if "class=\"aries-footer\"" in m.value]
+    assert len(footer) == 1
+    f = footer[0]
+    assert "Logo FMIPA Unpad" in f and "Departemen Matematika" in f
+    assert "Fakultas Matematika dan Ilmu Pengetahuan Alam" in f and "Universitas Padjadjaran" in f
+    assert "ARIES v0.1 – Prototipe Penelitian" in f
+    at = at.switch_page("pages/dashboard.py").run()
+    assert not any("aries-institution" in m.value and "aries-footer" not in m.value for m in at.markdown)

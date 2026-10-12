@@ -128,15 +128,22 @@ def total_economic_loss(params, y0, t):
     return _trapz(L, t)
 
 
-def _truncated_normal(rng, mean, std, lo, hi, max_tries=1000):
-    """Normal terpotong [lo, hi] lewat resampling (nilai di luar batas dibuang)."""
+def _truncated_normal(rng, mean, std, lo, hi, max_tries=100000):
+    """Normal terpotong [lo, hi] lewat resampling (nilai di luar batas diundi ulang).
+
+    Raises:
+        ValueError: bila `mean` di luar [lo, hi] sehingga tidak ada undian yang lolos
+            dalam `max_tries` percobaan (nilai tidak pernah dipotong ke batas).
+    """
     if std <= 0:
-        return min(max(mean, lo), hi)
+        if not lo <= mean <= hi:
+            raise ValueError(f"Nilai {mean} di luar rentang [{lo}, {hi}]")
+        return mean
     for _ in range(max_tries):
         x = rng.normal(mean, std)
         if lo <= x <= hi:
             return x
-    return min(max(mean, lo), hi)
+    raise ValueError(f"Tidak ada undian dalam rentang [{lo}, {hi}] untuk rata-rata {mean}")
 
 
 def monte_carlo_risk(base_params, y0, t, uncertain, n_sim=500, seed=42):
