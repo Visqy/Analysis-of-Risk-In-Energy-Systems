@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from core.interpretation import CATATAN_PROTOTIPE
-from tests.conftest import RESULT_PAGES, ROOT, page_texts, ran_app
+from tests.conftest import RESULT_PAGES, ROOT, make_app, page_texts, ran_app, set_text
 
 pytestmark = pytest.mark.slow
 
@@ -41,11 +41,16 @@ def test_catatan_prototipe_di_halaman_hasil():
         assert any(CATATAN_PROTOTIPE in c.value for c in at.caption), page
 
 
+def _kartu_interpretasi(at):
+    """Teks card interpretasi (HTML) yang tampil di halaman."""
+    return [m.value for m in at.markdown if "Interpretasi hasil" in m.value]
+
+
 def test_bagian_implikasi_di_dinamika_sistem():
     at = ran_app().switch_page("pages/dinamika_sistem.py").run()
     assert any("Implikasi bagi Pengambil Keputusan" in m.value for m in at.markdown)
-    isi = " ".join(m.value for m in at.markdown)
-    assert "**Temuan:**" in isi and "**Makna:**" in isi and "**Implikasi:**" in isi
+    isi = " ".join(_kartu_interpretasi(at))
+    assert "TEMUAN" in isi and "MAKNA" in isi and "IMPLIKASI" in isi
 
 
 def test_ringkasan_dan_implikasi_di_atas_grafik_dinamika():
@@ -55,16 +60,17 @@ def test_ringkasan_dan_implikasi_di_atas_grafik_dinamika():
     assert judul[1] == "##### Implikasi bagi Pengambil Keputusan"
     assert judul.index("##### Implikasi bagi Pengambil Keputusan") < next(
         i for i, j in enumerate(judul) if "Kapasitas" in j and "Permintaan" in j)
-    assert len(at.metric) == 3
+    kartu = [m.value for m in at.markdown if "aries-kpi-card" in m.value]
+    assert len(kartu) == 1 and kartu[0].count('class="aries-kpi-card"') == 3
+    assert not at.metric
 
 
 def test_interpretasi_dalam_card_tiga_baris_terpisah():
     at = ran_app().switch_page("pages/dinamika_sistem.py").run()
-    isi = [m.value for m in at.markdown if m.value.startswith("**Temuan:**")]
-    assert len(isi) == 3
-    for teks in isi:
-        bagian = teks.split("\n\n")
-        assert [b.split(":**")[0] for b in bagian] == ["**Temuan", "**Makna", "**Implikasi"]
+    kartu = _kartu_interpretasi(at)
+    assert len(kartu) == 3
+    for teks in kartu:
+        assert teks.index("TEMUAN") < teks.index("MAKNA") < teks.index("IMPLIKASI")
 
 
 def test_dua_tabel_peringkat_berjudul_jelas():
@@ -75,4 +81,28 @@ def test_dua_tabel_peringkat_berjudul_jelas():
     assert judul.index("##### Peringkat Berdasarkan Total Kerugian") < judul.index(
         "##### Peringkat Berdasarkan Risiko (CVaR 95%)")
     assert len(at.dataframe) == 3  # total kerugian, risiko, pertimbangan implementasi
-    assert any(m.value.startswith("**Temuan:**") for m in at.markdown)
+    assert len(_kartu_interpretasi(at)) == 1
+
+
+def test_dashboard_hero_kartu_dan_grafik_ringkasan():
+    at = make_app()
+    assert any("Analysis of Risk in Energy Systems" in m.value for m in at.markdown)
+    assert [b.label for b in at.button if b.key == "hero_run"] == ["Jalankan demo"]
+    assert not any("Skenario kerugian terendah" in m.value for m in at.markdown)
+    at.button(key="hero_run").click().run()
+    assert at.session_state["last_run"] is not None
+    assert [b.label for b in at.button if b.key == "hero_run"] == ["Demo selesai"]
+    assert at.button(key="hero_run").disabled
+    teks = " ".join(m.value for m in at.markdown)
+    for kata in ("Total kerugian", "VaR 95%", "CVaR 95%", "Skenario kerugian terendah",
+                 "Untuk pengambil keputusan", "Interpretasi hasil"):
+        assert kata in teks, kata
+    assert not at.metric
+
+
+def test_dashboard_hero_jalankan_ulang_saat_usang():
+    at = ran_app()
+    at = at.switch_page("pages/data_parameter.py").run()
+    set_text(at, "E0", "61,5")
+    at = at.switch_page("pages/dashboard.py").run()
+    assert [b.label for b in at.button if b.key == "hero_run"] == ["Jalankan ulang"]

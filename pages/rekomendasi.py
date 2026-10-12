@@ -20,6 +20,9 @@ from ui.components import interpretation_card, prototype_note, require_run
 
 st.header("Peringkat Skenario Berdasarkan Total Kerugian")
 
+_RANK_COLUMN = {"Peringkat": st.column_config.NumberColumn(width=64),
+                "Skenario": st.column_config.TextColumn(width=210)}
+
 run = require_run()
 if run is not None:
     rows = run["ranking"]
@@ -29,31 +32,31 @@ if run is not None:
 
     st.markdown("##### Peringkat Berdasarkan Total Kerugian")
     st.caption("Diurutkan dari total kerugian ekonomi terkecil, dihitung untuk semua skenario "
-               "terhadap baseline pada konfigurasi yang dijalankan.")
+               f"terhadap baseline pada konfigurasi yang dijalankan. Satuan kerugian: {L_UNIT}.")
     st.dataframe(pd.DataFrame([
         {
             "Peringkat": r["rank"],
             "Skenario": r["Skenario"],
-            f"Total Kerugian ({VARIABLE_UNITS['L']})": id_number(r["loss"]),
-            "Penurunan (absolut)": id_number(r["delta"]),
+            "Total Kerugian": id_number(r["loss"]),
+            "Penurunan": id_number(r["delta"]),
             "Penurunan (%)": f"{id_number(r['pct'])}%",
         } for r in rows
-    ]), hide_index=True)
+    ]), hide_index=True, column_config=_RANK_COLUMN)
 
     st.markdown(f"##### Peringkat Berdasarkan Risiko (CVaR {conf_pct}%)")
     st.caption(f"Diurutkan dari CVaR {conf_pct}% terkecil, yaitu rata-rata kerugian pada kondisi "
                "terburuk dari simulasi Monte Carlo yang dijalankan untuk tiap skenario "
-               "(iterasi, seed, dan distribusi sama dengan analisis utama).")
+               f"(iterasi, seed, dan distribusi sama dengan analisis utama). Satuan: {L_UNIT}.")
     rows_risk = run["ranking_risk"]
     st.dataframe(pd.DataFrame([
         {
             "Peringkat": r["rank"],
             "Skenario": r["Skenario"],
-            f"CVaR {conf_pct}% ({L_UNIT})": id_number(r["cvar"]),
-            f"VaR {conf_pct}% ({L_UNIT})": id_number(r["var"]),
-            "Penurunan CVaR (%)": f"{id_number(r['cvar_pct'])}%",
+            f"CVaR {conf_pct}%": id_number(r["cvar"]),
+            f"VaR {conf_pct}%": id_number(r["var"]),
+            "Penurunan (%)": f"{id_number(r['cvar_pct'])}%",
         } for r in rows_risk
-    ]), hide_index=True)
+    ]), hide_index=True, column_config=_RANK_COLUMN)
     interpretation_card(interpret_ranking_basis(rows, rows_risk, conf_pct, BASELINE_NAME))
 
     st.caption(
@@ -66,7 +69,7 @@ if run is not None:
         st.dataframe(pd.DataFrame([
             {
                 "Skenario": r["Skenario"],
-                f"Kerugian ({VARIABLE_UNITS['L']})": id_number(r["loss"]),
+                "Total Kerugian": id_number(r["loss"]),
                 "Biaya Implementasi": ("Tidak ada intervensi" if r["Skenario"] == BASELINE_NAME
                                        else "Tidak digunakan dalam pemeringkatan"),
                 "Kelayakan Teknis": ("Acuan" if r["Skenario"] == BASELINE_NAME

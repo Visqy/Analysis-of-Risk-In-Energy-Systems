@@ -23,6 +23,8 @@ st.set_page_config(page_title="ARIES — Energy Risk DSS", layout="wide")
 # Sembunyikan chrome Streamlit (toolbar, menu, ikon mode-bar chart, dsb) saat print/ekspor PDF.
 st.markdown("""
 <style>
+/* Ruang konten lebih lega di layar sedang: padding samping dikurangi. */
+div[data-testid="stMainBlockContainer"] { padding-left: 2.5rem; padding-right: 2.5rem; }
 /* Samakan tinggi label kotak angka agar input dalam satu baris sejajar. */
 @media (min-width: 992px) {
     [class*="st-key-w_in_"] label[data-testid="stWidgetLabel"] { min-height: 3.4em; align-items: flex-start; }
@@ -69,7 +71,8 @@ header[data-testid="stHeader"] { background: #FFFFFF !important; box-shadow: 0 1
     .modebar {
         display: none !important;
     }
-    .aries-footer-version { display: none !important; }
+    .aries-footer-version, .st-key-hero_actions { display: none !important; }
+    .aries-kpi-card { break-inside: avoid; }
     div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stAlert"],
     div[data-testid="stPlotlyChart"],

@@ -127,3 +127,18 @@ def test_gangguan_kecil_tiga_kasus(kw, expected):
     assert text.rstrip(".").endswith(expected)
     assert "16,2 tahun" in text
     assert "tidak kembali" not in text
+
+
+def test_periode_defisit_publik_dan_petunjuk_keputusan():
+    from core.interpretation import capacity_gap_periods, decision_hint
+    E = np.full_like(T, 50.0)
+    assert capacity_gap_periods(T, E, np.full_like(T, 40.0)) == []
+    D = np.where((T > 3) & (T < 6), 60.0, 40.0)
+    (i0, i1), = capacity_gap_periods(T, E, D)
+    assert 3 < T[i0] < 3.5 and 5.5 < T[i1] < 6
+    loss = [{"Skenario": "A"}, {"Skenario": "Base"}]
+    sama = [{"Skenario": "A"}, {"Skenario": "Base"}]
+    beda = [{"Skenario": "Base"}, {"Skenario": "A"}]
+    assert "A dapat dipertimbangkan lebih lanjut" in decision_hint(loss, sama, "Base")
+    assert "Peringkat berbeda" in decision_hint(loss, beda, "Base")
+    assert "Tidak ada skenario intervensi" in decision_hint(beda, sama, "Base")

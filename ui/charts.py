@@ -64,8 +64,39 @@ def multi_line_chart(t, series, y_unit=None):
     fig = go.Figure()
     for name, y, color in series:
         fig.add_trace(go.Scatter(x=t, y=y, mode="lines", name=name, line=dict(color=color)))
-    fig.update_layout(xaxis_title="t (tahun)", yaxis_title=y_unit, height=CHART_HEIGHT,
-                      margin=CHART_MARGIN, legend=dict(font=dict(size=12)))
+    fig.update_layout(xaxis_title="t (tahun)", yaxis_title=y_unit, height=CHART_HEIGHT + 40,
+                      margin=dict(CHART_MARGIN, b=70),
+                      legend=dict(orientation="h", y=-0.28, x=0, xanchor="left", font=dict(size=12)))
+    return localize(fig, x_hover=".1f", y_hover=".2f")
+
+
+def overview_chart(t, E, D, P, gap_periods, y_unit=None, p_unit=None):
+    """Grafik ringkasan: kapasitas dan permintaan (sumbu kiri), harga (sumbu kanan).
+
+    Args:
+        t, E, D, P: grid waktu dan kurva kapasitas, permintaan, harga.
+        gap_periods: list (indeks_awal, indeks_akhir) periode permintaan melampaui
+            kapasitas; diarsir merah muda, dengan penanda pada awal periode pertama.
+        y_unit, p_unit: judul sumbu kiri dan kanan.
+    """
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=E, mode="lines", name="Kapasitas", line=dict(color=COLORS["E"], width=3)))
+    fig.add_trace(go.Scatter(x=t, y=D, mode="lines", name="Permintaan", line=dict(color=COLORS["D"], width=3)))
+    fig.add_trace(go.Scatter(x=t, y=P, mode="lines", name="Harga (sumbu kanan)", yaxis="y2",
+                             line=dict(color=COLORS["P"], width=3)))
+    for k, (i0, i1) in enumerate(gap_periods):
+        fig.add_vrect(
+            x0=float(t[i0]), x1=float(t[i1]), fillcolor="rgba(230,57,70,0.12)", line_width=0,
+            layer="below",
+            annotation_text="Permintaan melampaui kapasitas" if k == 0 else None,
+            annotation_position="top left", annotation_font_size=11,
+            annotation_font_color=COLORS["L"])
+    fig.update_layout(
+        xaxis=dict(title="t (tahun)", range=[float(t[0]), float(t[-1])]),
+        yaxis_title=y_unit, height=CHART_HEIGHT + 70,
+        margin=dict(l=40, r=50, t=30, b=90),
+        yaxis2=dict(title=p_unit, overlaying="y", side="right", showgrid=False),
+        legend=dict(orientation="h", y=-0.25, x=0, xanchor="left", font=dict(size=12)))
     return localize(fig, x_hover=".1f", y_hover=".2f")
 
 

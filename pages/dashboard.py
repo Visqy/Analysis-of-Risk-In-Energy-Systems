@@ -1,44 +1,52 @@
 """Halaman Dashboard: ringkasan hasil utama.
 
-Menampilkan VaR, CVaR, total kerugian kumulatif, nilai akhir E(T), D(T), P(T),
-dan ringkasan peringkat skenario. Data dari `last_run`; kosong bila simulasi
-belum dijalankan.
+Banner pembuka dengan tombol demo, empat langkah alur kerja, kartu total
+kerugian, VaR, CVaR dan skenario kerugian terendah, grafik ringkasan dinamika
+dengan interpretasinya, dan catatan prototipe. Data dari `last_run`; kosong
+bila simulasi belum dijalankan.
 """
 
 import streamlit as st
 
 from core.formatting import id_number
+from core.interpretation import (
+    capacity_gap_periods, decision_hint, interpret_capacity_demand,
+)
 from core.recommendation import get_recommendation
-from core.scenarios import VARIABLE_UNITS
-from ui.components import metric_unit, prototype_note, require_run
+from core.scenarios import BASELINE_NAME, VARIABLE_UNITS
+from ui.charts import overview_chart
+from ui.components import (
+    decision_box, hero, interpretation_card, kpi_cards, overview_steps, prototype_note,
+    require_run,
+)
 
-st.header("Dashboard")
+hero()
+overview_steps()
 
 run = require_run()
 if run is not None:
     cfg = run["config"]
     conf_txt = int(round(cfg["conf"] * 100))
-
-    st.markdown("##### Ringkasan Hasil Utama")
-    c1, c2, c3 = st.columns(3)
-    metric_unit(c1, "Total Kerugian Kumulatif", id_number(run["total_loss"]), VARIABLE_UNITS["L"])
-    metric_unit(c2, f"VaR {conf_txt}%", id_number(run["var"]), VARIABLE_UNITS["L"])
-    metric_unit(c3, f"CVaR {conf_txt}%", id_number(run["cvar"]), VARIABLE_UNITS["L"])
-    c4, c5, c6 = st.columns(3)
-    metric_unit(c4, "Kapasitas Akhir $E(T)$", id_number(run["E"][-1]), VARIABLE_UNITS["E"])
-    metric_unit(c5, "Permintaan Akhir $D(T)$", id_number(run["D"][-1]), VARIABLE_UNITS["D"])
-    metric_unit(c6, "Harga Akhir $P(T)$", id_number(run["P"][-1]), VARIABLE_UNITS["P"])
-
-    st.markdown("##### Peringkat Skenario")
+    L_UNIT = VARIABLE_UNITS["L"]
     top, beats_baseline = get_recommendation(run["ranking"])
     if beats_baseline:
-        st.info(
-            f"**{top['Skenario']}** — skenario dengan kerugian terendah berdasarkan model saat "
-            f"ini ({id_number(top['loss'])} {VARIABLE_UNITS['L']}, turun {id_number(top['pct'])}% "
-            f"dari baseline). Lihat halaman **Peringkat Skenario** untuk detail dan batasannya."
-        )
+        low_sub, low_delta = L_UNIT, f"{top['Skenario']} · −{id_number(top['pct'], 1)}%"
     else:
-        st.info("Tidak ada skenario intervensi yang lebih baik dari baseline berdasarkan "
-                "parameter saat ini. Lihat halaman **Peringkat Skenario** untuk detail.")
+        low_sub, low_delta = f"{top['Skenario']} (baseline)", None
+    kpi_cards([
+        ("Total kerugian", id_number(run["total_loss"]), L_UNIT, None),
+        (f"VaR {conf_txt}%", id_number(run["var"]), "ambang kerugian", None),
+        (f"CVaR {conf_txt}%", id_number(run["cvar"]), "rata-rata kondisi ekstrem", None),
+        ("Skenario kerugian terendah", id_number(top["loss"]), low_sub, low_delta),
+    ])
+
+    t, E, D, P = run["t"], run["E"], run["D"], run["P"]
+    st.markdown("##### Dinamika kapasitas, permintaan, dan harga")
+    st.caption(f"Horizon simulasi 0–{cfg['T_end']} tahun")
+    st.plotly_chart(overview_chart(
+        t, E, D, P, capacity_gap_periods(t, E, D),
+        y_unit=VARIABLE_UNITS["E"], p_unit=VARIABLE_UNITS["P"]))
+    interpretation_card(interpret_capacity_demand(t, E, D))
+    decision_box(decision_hint(run["ranking"], run["ranking_risk"], BASELINE_NAME))
 
     prototype_note()

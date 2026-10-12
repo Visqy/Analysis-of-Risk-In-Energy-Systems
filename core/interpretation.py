@@ -92,6 +92,17 @@ def _gaps(t, E, D):
     return {"segments": segments, "persists": segments[-1][1] >= len(over) - 1, "n": len(over)}
 
 
+def capacity_gap_periods(t, E, D):
+    """Periode permintaan melampaui kapasitas (selisih D - E di atas 1% dari E).
+
+    Returns:
+        List (indeks_awal, indeks_akhir) per periode kontinu, urut waktu; list kosong
+        bila tidak ada.
+    """
+    g = _gaps(t, E, D)
+    return [] if g is None else list(g["segments"])
+
+
 def _gap_periods(t, segs):
     """Frasa periode defisit: "tahun ke-a sampai tahun ke-b", beberapa periode dihubungkan "dan"."""
     parts = [f"{_year(t, i0)} sampai {_year(t, i1)}" for i0, i1 in segs]
@@ -328,3 +339,22 @@ def interpret_perturbation(t, D_pert, P_pert, D_star, P_star, beta, gamma, osc_f
             f"{id_number(P_star)} dengan periode ≈ {id_number(period, 1)} tahun; simpangan gabungan "
             f"bernilai {id_number(first)} di awal dan {id_number(last)} di akhir, sehingga "
             f"{behaviour}.")
+
+
+def decision_hint(ranking_loss, ranking_risk, baseline_name):
+    """Satu kalimat bersyarat untuk pengambil keputusan dari peringkat skenario.
+
+    Args:
+        ranking_loss: baris peringkat total kerugian (urut; punya "Skenario").
+        ranking_risk: baris peringkat risiko CVaR (urut; punya "Skenario").
+        baseline_name: nama skenario baseline.
+    """
+    a, b = ranking_loss[0]["Skenario"], ranking_risk[0]["Skenario"]
+    if a == baseline_name:
+        return ("Tidak ada skenario intervensi yang lebih baik daripada baseline pada parameter "
+                "saat ini; peninjauan ulang parameter atau rancangan skenario dapat dipertimbangkan.")
+    if a == b:
+        return (f"{a} dapat dipertimbangkan lebih lanjut berdasarkan kerugian total dan CVaR, "
+                "sebelum menelaah biaya, kelayakan teknis, dan aspek implementasi lainnya.")
+    return (f"Peringkat berbeda antara kerugian total ({a}) dan CVaR ({b}); keduanya dapat "
+            "dibandingkan sebelum menelaah biaya, kelayakan teknis, dan aspek implementasi lainnya.")

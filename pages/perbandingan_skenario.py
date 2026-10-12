@@ -16,7 +16,7 @@ from core.model import simulate, trapz
 from core.scenarios import BASELINE_NAME, SCENARIOS, VARIABLE_UNITS
 from core.state import bind
 from ui.charts import CHART_HEIGHT, CHART_MARGIN, COLORS, SCENARIO_COLORS, line_chart, localize
-from ui.components import interpretation_card, metric_unit, prototype_note, require_run
+from ui.components import interpretation_card, kpi_cards, prototype_note, require_run
 
 st.header("Perbandingan Skenario Kebijakan")
 
@@ -40,7 +40,7 @@ if run is not None:
         st.markdown(f"Skenario terpilih: **{name}**")
         st.markdown("##### Kerugian Ekonomi $L(t)$")
         st.plotly_chart(line_chart(t, L_i, COLORS["L"], fill=True, y_unit=VARIABLE_UNITS["L"]))
-        metric_unit(st, "Total Kerugian Kumulatif", id_number(trapz(L_i, t)), VARIABLE_UNITS["L"])
+        kpi_cards([("Total kerugian kumulatif", id_number(trapz(L_i, t)), VARIABLE_UNITS["L"], None)])
         st.caption("Pilih 2+ skenario untuk grafik perbandingan.")
     else:
         names, losses, curves = [], [], {}
@@ -55,8 +55,10 @@ if run is not None:
 
         st.markdown("##### Kerugian Ekonomi $L(t)$ per Skenario")
         fig_cmp.update_layout(xaxis_title="t (tahun)", yaxis_title=VARIABLE_UNITS["L"],
-                              height=CHART_HEIGHT, margin=CHART_MARGIN,
-                              legend=dict(font=dict(size=12)))
+                              height=CHART_HEIGHT + 60,
+                              margin=dict(CHART_MARGIN, b=110),
+                              legend=dict(orientation="h", y=-0.28, x=0, xanchor="left",
+                                          font=dict(size=12)))
         localize(fig_cmp, x_hover=".1f", y_hover=".2f")
         st.plotly_chart(fig_cmp)
         interpretation_card(interpret_comparison(
@@ -70,9 +72,9 @@ if run is not None:
         st.plotly_chart(fig_bar)
 
         st.markdown("**Ringkasan Total Kerugian**")
+        st.caption(f"Satuan: {VARIABLE_UNITS['L']}.")
         st.dataframe(pd.DataFrame({"Skenario": names,
-                                   f"Total Kerugian ({VARIABLE_UNITS['L']})":
-                                       [id_number(v) for v in losses]}),
+                                   "Total Kerugian": [id_number(v) for v in losses]}),
                      hide_index=True)
 
     prototype_note()

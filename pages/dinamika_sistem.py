@@ -15,7 +15,7 @@ from core.interpretation import (
 )
 from core.scenarios import VARIABLE_UNITS
 from ui.charts import COLORS, line_chart, multi_line_chart
-from ui.components import interpretation_card, metric_unit, prototype_note, require_run
+from ui.components import interpretation_card, kpi_cards, prototype_note, require_run
 
 st.header("Dinamika Sistem Energi–Ekonomi")
 
@@ -24,10 +24,11 @@ if run is not None:
     t, E, D, P, L = run["t"], run["E"], run["D"], run["P"], run["L"]
 
     st.markdown("##### Ringkasan")
-    c1, c2, c3 = st.columns(3)
-    metric_unit(c1, "Total Kerugian Kumulatif", id_number(run["total_loss"]), VARIABLE_UNITS["L"])
-    metric_unit(c2, "Kapasitas Akhir $E(T)$", id_number(E[-1]), VARIABLE_UNITS["E"])
-    metric_unit(c3, "Permintaan Akhir $D(T)$", id_number(D[-1]), VARIABLE_UNITS["D"])
+    kpi_cards([
+        ("Total kerugian kumulatif", id_number(run["total_loss"]), VARIABLE_UNITS["L"], None),
+        ("Kapasitas akhir E(T)", id_number(E[-1]), VARIABLE_UNITS["E"], None),
+        ("Permintaan akhir D(T)", id_number(D[-1]), VARIABLE_UNITS["D"], None),
+    ])
 
     st.markdown("##### Implikasi bagi Pengambil Keputusan")
     for item in interpret_implications(t, E, D, P, L):

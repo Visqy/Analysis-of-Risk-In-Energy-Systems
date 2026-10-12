@@ -1,12 +1,14 @@
 """Komponen UI bersama: header, stepper, tile, strip metadata hasil, dan keadaan kosong."""
 
 import base64
+import html
+import re
 from pathlib import Path
 
 import streamlit as st
 
 from core.interpretation import CATATAN_PROTOTIPE
-from core.state import get_run, is_stale, ui_status
+from core.state import execute_run, get_run, is_stale, ui_status
 
 _BADGES = {
     "invalid": ("Input belum valid", "#FDECEA", "#8F1D15", "#F2B8B2"),
@@ -136,21 +138,47 @@ def result_strip(run):
                    "konfigurasi sebelumnya. Jalankan ulang di halaman Data & Parameter.")
 
 
+_TMI_RE = re.compile(
+    r"\*\*(Temuan|Makna|Implikasi):\*\*\s*(.*?)(?=\n\n\*\*(?:Temuan|Makna|Implikasi):\*\*|\Z)", re.S)
+
+
 def interpretation_card(text):
-    """Tampilkan satu interpretasi (Temuan/Makna/Implikasi) dalam satu card netral."""
+    """Tampilkan satu interpretasi (Temuan/Makna/Implikasi) dalam satu card.
+
+    Tiap bagian diberi label kecil berwarna dan garis pemisah. Bila teks tidak
+    berformat tiga bagian, ditampilkan apa adanya sebagai markdown.
+
+    Args:
+        text: keluaran `interpret_*` berformat tiga bagian berlabel Temuan, Makna, Implikasi.
+    """
+    parts = {k: v.strip() for k, v in _TMI_RE.findall(text)}
     with st.container(border=True):
-        st.markdown(text)
+        if set(parts) != {"Temuan", "Makna", "Implikasi"}:
+            st.markdown(text)
+            return
+        rows = "".join(
+            '<div style="padding:10px 0;border-top:1px solid #E3E8EF">'
+            f'<div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#1F5FD8">{k.upper()}</div>'
+            f'<div style="font-size:14px;color:#2B3A4F;line-height:1.55;padding-top:4px">{html.escape(parts[k])}</div></div>'
+            for k in ("Temuan", "Makna", "Implikasi"))
+        st.markdown(
+            '<div style="font-size:15px;font-weight:700;color:#10233B">Interpretasi hasil</div>'
+            '<div style="font-size:12px;color:#5C6B80;padding:2px 0 8px">Temuan · Makna · Implikasi</div>'
+            f"{rows}", unsafe_allow_html=True)
+
+
+def decision_box(text):
+    """Kotak hijau "Untuk pengambil keputusan" berisi satu kalimat bersyarat `text`."""
+    st.markdown(
+        '<div style="background:#E8F5EE;border-radius:8px;padding:12px 14px;margin:2px 0 10px;'
+        'font-size:13.5px;line-height:1.5;color:#17694A">'
+        f'<strong style="color:#10233B">Untuk pengambil keputusan:</strong> {html.escape(text)}</div>',
+        unsafe_allow_html=True)
 
 
 def prototype_note():
     """Catatan tetap di akhir halaman hasil: hasil prototipe, bukan rekomendasi kebijakan nyata."""
     st.caption(CATATAN_PROTOTIPE)
-
-
-def metric_unit(container, label, value, unit):
-    """Kartu angka `container.metric(label, value)` dengan satuan sebagai keterangan kecil di bawahnya."""
-    container.metric(label, value)
-    container.caption(unit)
 
 
 _LOGO_PATH = Path(__file__).parent / "assets" / "logo_fmipa_unpad.webp"
@@ -193,3 +221,99 @@ def institution_footer(version_text):
         f'<div class="aries-footer-version" style="font-size:13px;color:#5C6B80">{version_text}</div>'
         "</div>",
         unsafe_allow_html=True)
+
+
+_HERO_CSS = """<style>
+.st-key-hero { background: linear-gradient(135deg, #0F2A47 0%, #1D4A73 100%); border-radius: 14px;
+  padding: 28px 28px 24px; margin-bottom: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.st-key-hero p, .st-key-hero div[data-testid="stMarkdownContainer"] { color: #FFFFFF; }
+.st-key-hero button, .st-key-hero a[data-testid="stPageLink-NavLink"] { height: 42px; min-height: 42px;
+  padding: 0 18px; font-size: 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; }
+.st-key-hero button { background: #FFFFFF; color: #10233B; border: 1px solid #FFFFFF; font-weight: 600; }
+.st-key-hero button p, .st-key-hero button span { color: #10233B; }
+.st-key-hero button:disabled { background: #FFFFFF !important; border-color: #FFFFFF !important; opacity: 1 !important; }
+.st-key-hero button:disabled p, .st-key-hero button:disabled span { color: #17694A !important; }
+.st-key-hero a[data-testid="stPageLink-NavLink"] { background: rgba(255,255,255,0.14); color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.35); border-radius: 8px; font-weight: 600; }
+.st-key-hero a[data-testid="stPageLink-NavLink"] p,
+.st-key-hero a[data-testid="stPageLink-NavLink"] span { color: #FFFFFF !important; }
+.st-key-hero a[data-testid="stPageLink-NavLink"]:hover { background: rgba(255,255,255,0.24); }
+</style>"""
+
+
+def hero():
+    """Banner pembuka Dashboard: judul, deskripsi, tombol "Jalankan demo" dan tautan input.
+
+    Tombol menjalankan simulasi dengan input sekarang (callback `execute_run`);
+    label mengikuti status: "Jalankan demo", "Demo selesai" (hasil terbaru, tombol
+    nonaktif), "Jalankan ulang" (hasil usang). Nonaktif bila input tidak valid.
+    """
+    status, _ = ui_status()
+    label, disabled = {
+        "invalid": ("Jalankan demo", True), "ready": ("Jalankan demo", False),
+        "fresh": ("Demo selesai", True), "stale": ("Jalankan ulang", False),
+    }[status]
+    st.markdown(_HERO_CSS, unsafe_allow_html=True)
+    with st.container(key="hero"):
+        st.markdown(
+            '<div style="font-size:12px;letter-spacing:.08em;color:#B8C9DE;font-weight:600">'
+            "DECISION SUPPORT SYSTEM · PROTOTIPE PENELITIAN</div>"
+            '<div style="font-size:30px;font-weight:700;color:#FFFFFF;line-height:1.25;padding:6px 0">'
+            "Analysis of Risk in Energy Systems</div>"
+            '<div style="font-size:14.5px;color:#DCE7F4;line-height:1.55;max-width:640px;padding-bottom:16px">'
+            "Eksplorasi hubungan kapasitas, permintaan, harga, kerugian ekonomi, dan risiko untuk "
+            "membandingkan alternatif skenario energi.</div>", unsafe_allow_html=True)
+        with st.container(horizontal=True, key="hero_actions"):
+            st.button(label, key="hero_run", on_click=execute_run, disabled=disabled,
+                      icon=":material/check:" if status == "fresh" else None)
+            st.page_link("pages/data_parameter.py", label="Masukkan data sendiri",
+                         icon=":material/edit:")
+
+
+def overview_steps():
+    """Empat langkah alur kerja: Isi data, Jalankan, Bandingkan, Interpretasikan."""
+    done = 2 if get_run() is not None else 0
+    steps = [("Isi data", "Parameter model"), ("Jalankan", "Simulasi sistem"),
+             ("Bandingkan", "Skenario energi"), ("Interpretasikan", "Risiko & implikasi")]
+    cells = "".join(
+        '<div style="flex:1 1 150px;display:flex;align-items:center;gap:10px;padding:12px 14px;'
+        'border-right:1px solid #E3E8EF">'
+        f'<span style="width:26px;height:26px;min-width:26px;border-radius:50%;display:inline-flex;'
+        f'align-items:center;justify-content:center;font-size:12px;font-weight:700;'
+        f'background:{"#1F5FD8" if i <= done else "#E7F0FF"};color:{"#fff" if i <= done else "#1F5FD8"}">{i}</span>'
+        f'<span><div style="font-size:13.5px;font-weight:600;color:#10233B">{a}</div>'
+        f'<div style="font-size:12px;color:#5C6B80">{b}</div></span></div>'
+        for i, (a, b) in enumerate(steps, 1))
+    st.markdown(
+        '<div style="display:flex;flex-wrap:wrap;border:1px solid #E3E8EF;border-radius:12px;'
+        f'background:#fff;overflow:hidden;margin-bottom:14px">{cells}</div>', unsafe_allow_html=True)
+
+
+_KPI_CSS = """<style>
+.aries-kpi-wrap { container-type: inline-size; }
+.aries-kpi-grid { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 14px; }
+@container (min-width: 420px) { .aries-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@container (min-width: 420px) { .aries-kpi-grid[data-n="1"] { grid-template-columns: 1fr; } }
+@container (min-width: 640px) { .aries-kpi-grid[data-n="3"] { grid-template-columns: repeat(3, 1fr); } }
+@container (min-width: 880px) { .aries-kpi-grid[data-n="4"] { grid-template-columns: repeat(4, 1fr); } }
+</style>"""
+
+
+def kpi_cards(cards):
+    """Deret kartu ringkas; jumlah kolom mengikuti lebar kontainer dan jumlah kartu.
+
+    Args:
+        cards: list (label, nilai, subjudul, delta); `delta` teks hijau opsional (None bila tidak ada).
+    """
+    def card(label, value, sub, delta):
+        extra = (f'<div style="font-size:12.5px;color:#17694A;padding-top:2px">{html.escape(delta)}</div>'
+                 if delta else "")
+        return ('<div class="aries-kpi-card" style="background:#fff;border:1px solid #E3E8EF;'
+                'border-radius:12px;padding:14px 16px;min-width:0">'
+                f'<div style="font-size:12.5px;color:#5C6B80">{html.escape(label)}</div>'
+                f'<div style="font-size:26px;font-weight:600;color:#10233B;line-height:1.3;padding:4px 0">{value}</div>'
+                f'<div style="font-size:12.5px;color:#5C6B80">{html.escape(sub)}</div>{extra}</div>')
+    st.markdown(
+        _KPI_CSS + '<div class="aries-kpi-wrap">'
+        f'<div class="aries-kpi-grid" data-n="{len(cards)}">'
+        + "".join(card(*c) for c in cards) + "</div></div>", unsafe_allow_html=True)
